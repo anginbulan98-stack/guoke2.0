@@ -41,8 +41,8 @@ export default function GuokeApp({
         </div>
         <nav className="nav" id="nav"></nav>
       </div>
-      <Script src="/guoke.js" strategy="afterInteractive" />
-      <script type="module" src="/guoke-sb.js"></script>
+      <Script src="/guoke.js?v=20261013c" strategy="afterInteractive" />
+      <script type="module" src="/guoke-sb.js?v=20261013c"></script>
     </>
   );
 }

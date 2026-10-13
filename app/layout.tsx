@@ -24,7 +24,7 @@ export default function RootLayout({
   return (
     <html lang="id">
       <body>
-        <Script src="/sb.js" strategy="beforeInteractive" />
+        <Script src="/sb.js?v=20261013c" strategy="beforeInteractive" />
         {children}
       </body>
     </html>

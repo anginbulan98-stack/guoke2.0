@@ -8,20 +8,23 @@ let sb=await getSb(),ok=false;
 function dev(){try{let d=localStorage.getItem("guoke_device");if(!d){d="d"+Math.random().toString(36).slice(2)+Date.now().toString(36);localStorage.setItem("guoke_device",d)}return d}catch(e){return "anon"}}
 async function q(p){const c=new AbortController();const t=setTimeout(()=>c.abort(),10000);try{return await p.abortSignal(c.signal)}finally{clearTimeout(t)}}
 for(let att=0;att<3&&!ok;att++){try{const r=await q(sb.from("comments").select("id").limit(1));ok=!r.error;if(!ok&&att<2)await new Promise(r=>setTimeout(r,2000))}catch(e){ok=false;if(att<2)await new Promise(r=>setTimeout(r,2000))}}
-window.SB={ok};window._sbCm=[];window._sbKey="";
+window.SB={get ok(){return ok}};window._sbCm=[];window._sbKey="";
+async function ensureOk(){if(ok)return true;const now=Date.now();if(now-(window._sbProbe||0)<30000)return false;window._sbProbe=now;
+for(let att=0;att<2;att++){try{const r=await q(sb.from("comments").select("id").limit(1));ok=!r.error;if(ok)return true}catch(e){}await new Promise(r=>setTimeout(r,1500))}
+return ok}
 window.SBpull=async()=>{
-if(!ok||!window._cur)return;const[i,ep]=window._cur;const a=A[i];if(!a)return;
+if(!(await ensureOk())||!window._cur)return;const[i,ep]=window._cur;const a=A[i];if(!a)return;
 const key=a.t+"|"+ep;if(window._sbKey===key||window._sbBusy)return;window._sbKey=key;window._sbBusy=true;
 try{const r=await q(sb.from("comments").select("name,text").eq("title",a.t).eq("ep",String(ep)).order("created_at",{ascending:false}).limit(30));
 if(!r.error&&window._sbKey===key){window._sbCm=r.data.map(x=>({n:x.name||"Anonim",t:x.text}));if(document.querySelector("#cmbox"))renderCm()}}catch(e){}
 window._sbBusy=false};
 window.SBpush=async(txt)=>{
-if(!ok||!window._cur)return;const[i,ep]=window._cur;const a=A[i];if(!a)return;
+if(!(await ensureOk())||!window._cur)return;const[i,ep]=window._cur;const a=A[i];if(!a)return;
 try{await q(sb.from("comments").insert({title:a.t,ep:String(ep),name:(window._uname||"Kamu"),text:txt}))}catch(e){}
 window._sbKey="";window.SBpull()};
 async function bk(){try{const{data}=await sb.auth.getSession();const u=data.session&&data.session.user;if(u)return "u_"+u.id}catch(e){}return dev()}
 window.SBbm=async(title,on)=>{
-if(!ok||!title)return;const d=await bk();
+if(!(await ensureOk())||!title)return;const d=await bk();
 try{if(on)await q(sb.from("bookmarks").upsert({device_id:d,title},{onConflict:"device_id,title"}));
 else await q(sb.from("bookmarks").delete().eq("device_id",d).eq("title",title))}catch(e){}};
 async function pullBm(){try{const d=await bk();
