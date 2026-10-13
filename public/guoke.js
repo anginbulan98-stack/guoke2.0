@@ -235,7 +235,7 @@ o.innerHTML=`<div style="background:#000;position:relative"><button class="rb" s
 o.classList.add("on");o.scrollTop=0;
 stopPlay();Sync.hydrate();loadSrc(i,ep,"");window._cur=[i,ep];recordEp(i,ep,0,"EP "+ep);renderCm();autoEmb(i,ep,0)}
 function setVMode(i,ep,m){window._vmode=m;$$("#vtabs b").forEach((b,k)=>b.classList.toggle("on",k==m));
-const v=$("#vid"),e=$("#emb");if(m==0){if(v){try{v.pause()}catch(x){}v.style.display="none"}if(e)e.style.display="block";const s=$("#esrv");if(s)s.style.display="flex";autoEmb(i,ep,window._esrv||0)}
+const v=$("#vid"),e=$("#emb");if(m==0){if(v){try{v.pause()}catch(x){}v.style.display="none"}if(e)e.style.display="block";const s=$("#esrv");if(s)s.style.display="flex";vOverlay(false);autoEmb(i,ep,window._esrv||0)}
 else{stopPlay();if(e){e.removeAttribute("src");e.style.display="none"}if(v)v.style.display="block";const s=$("#esrv");if(s)s.style.display="none";autoHttp()}}
 function vnow(t){const e=$("#vnowt");if(e)e.textContent=t}
 function embNext(){const c=window._cur;if(!c)return;setEmb(c[0],c[1],((window._esrv||0)+1)%2)}
@@ -244,11 +244,11 @@ window._embT=setTimeout(()=>{if(window._embOk||window._embAuto)return;window._em
 window.addEventListener("message",e=>{try{if(!/vidcloud\.sbs|vidplus\.to/.test(e.origin||""))return;const d=JSON.stringify(e.data||"").toLowerCase();if(/error|fail|2324|stalled/.test(d)&&!window._embAuto){window._embAuto=true;const c=window._cur;if(c)setEmb(c[0],c[1],((window._esrv||0)+1)%2)}}catch(x){}});
 async function setEmb(i,ep,s){window._esrv=s;$$("#esrv b").forEach((b,k)=>b.classList.toggle("on",k==s));const a=A[i];const id=a.aid||await Sync.ani(a.t);const e=$("#emb");if(!e)return;
 if(!id){vnow(`Tidak ketemu sumber tonton untuk "${a.t}"`);return}
-e.style.display="block";const v=$("#vid");if(v)v.style.display="none";
+e.style.display="block";const v=$("#vid");if(v)v.style.display="none";vOverlay(false);
 e.src=Sync.emb(id,ep,s);embWatch(e.src);vnow(`EP ${ep} · Server ${s+1}`)}
 async function autoEmb(i,ep,s){window._esrv=s||0;window._vmode=0;const a=A[i];const id=a.aid||await Sync.ani(a.t);if(!$("#emb"))return;
 if(!id){vnow(`Tidak ketemu sumber tonton untuk "${a.t}"`);return}
-const e=$("#emb");e.style.display="block";const v=$("#vid");if(v)v.style.display="none";const sv=$("#esrv");if(sv)sv.style.display="flex";e.src=Sync.emb(id,ep,window._esrv);embWatch(e.src);vnow(`EP ${ep} · Server 1`)}
+const e=$("#emb");e.style.display="block";const v=$("#vid");if(v)v.style.display="none";vOverlay(false);const sv=$("#esrv");if(sv)sv.style.display="flex";e.src=Sync.emb(id,ep,window._esrv);embWatch(e.src);vnow(`EP ${ep} · Server 1`)}
 document.addEventListener("load",e=>{if(e.target&&e.target.id=="emb")window._embOk=true},true);
 function loadLib(u,g){return new Promise((res,rej)=>{if(window[g])return res();const s=document.createElement("script");s.src=u;s.onload=()=>res();s.onerror=rej;document.head.appendChild(s)})}
 function vstat(t){const e=$("#vstat");if(e)e.textContent=t}
@@ -257,7 +257,55 @@ function bmCur(b,i){const on=bmToggle(i);b.innerHTML=(on?"✓":"⚑")+"<br>Simpa
 function trackWatch(v){if(!v||v._trk)return;v._trk=1;v._lc=0;
 v.ontimeupdate=()=>{try{const d=v.currentTime-(v._lc||0);v._lc=v.currentTime;if(d>0&&d<10){const s=ST.load();s.sec+=d;if(!v._sv||Date.now()-v._sv>10000){v._sv=Date.now();ST.save(s)}}}catch(e){}};
 v.onpause=()=>{try{ST.save(ST.load())}catch(e){}};v.onended=()=>{try{ST.save(ST.load())}catch(e){}}}
-async function playHttp(url,note){const v=$("#vid");if(!v)return;stopPlay();trackWatch(v);const c=window._cur;if(c)vnow(`EP ${c[1]} · File langsung`);
+function vFmt(s){if(!isFinite(s)||s<0)s=0;const h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=Math.floor(s%60);return(h?h+":"+String(m).padStart(2,"0"):m)+":"+String(x).padStart(2,"0")}
+function vOverlay(show){const o=document.querySelector("#vui");if(o)o.style.display=show?"flex":"none"}
+function wirePlayer(){
+const v=document.querySelector("#vid");if(!v||v._wired)return true;v._wired=true;
+v.removeAttribute("controls");
+const wrap=v.parentElement;wrap.classList.add("vwrap");
+const ui=document.createElement("div");ui.className="vui";ui.id="vui";
+ui.innerHTML=`<div class="vbig"><button id="vbig" aria-label="Putar">▶</button></div><div class="vspin" id="vspin"><i></i></div><div class="vflash l" id="vfL"></div><div class="vflash r" id="vfR"></div><div class="vbar"><button class="vbtn" id="vpp" aria-label="Putar">▶</button><span class="vtime" id="vtm">0:00 / 0:00</span><div class="vseek" id="vsk"><div class="trk"><div class="buf" id="vbf"></div><div class="fil" id="vfi"></div><div class="knob" id="vkb"></div></div></div><button class="vbtn" id="vsp" aria-label="Kecepatan">1x</button><div class="vvol"><button class="vbtn" id="vmu" aria-label="Suara">🔊</button><input type="range" id="vvo" min="0" max="1" step="0.05" value="1"></div><button class="vbtn" id="vst" aria-label="Pengaturan">⚙</button><button class="vbtn" id="vfs" aria-label="Layar penuh">⛶</button></div>`;
+wrap.appendChild(ui);
+const qi=x=>ui.querySelector("#"+x);
+const pp=qi("vpp"),tm=qi("vtm"),sk=qi("vsk"),bf=qi("vbf"),fi=qi("vfi"),kb=qi("vkb"),sp=qi("vsp"),mu=qi("vmu"),vo=qi("vvo"),st=qi("vst"),fs=qi("vfs"),big=qi("vbig"),spin=qi("vspin"),fL=qi("vfL"),fR=qi("vfR");
+const upd=()=>{const d=v.duration||0,t=v.currentTime||0;tm.textContent=vFmt(t)+" / "+vFmt(d);
+const p=d?t/d*100:0;fi.style.width=p+"%";kb.style.left=p+"%";
+try{if(v.buffered.length){const b=v.buffered.end(v.buffered.length-1);bf.style.width=(d?Math.min(b/d,1)*100:0)+"%"}}catch(e){}
+const playing=!v.paused&&!v.ended,ic=playing?"❚❚":"▶";pp.textContent=ic;big.textContent=ic};
+const show=()=>{wrap.classList.remove("hideui");clearTimeout(v._ht);if(!v.paused&&!v.ended)v._ht=setTimeout(()=>wrap.classList.add("hideui"),3000)};
+const poke=()=>{if(v.paused||v.ended)show();else if(wrap.classList.contains("hideui"))show();else{clearTimeout(v._ht);wrap.classList.add("hideui")}};
+const toggle=()=>{if(v.paused||v.ended)v.play().catch(()=>{});else v.pause();show()};
+const flash=(el,txt)=>{el.textContent=txt;el.style.display="block";clearTimeout(el._t);el._t=setTimeout(()=>el.style.display="none",600)};
+const seekRel=s=>{try{const d=v.duration||0;v.currentTime=d?Math.min(Math.max((v.currentTime||0)+s,0),d):0}catch(e){}upd()};
+pp.onclick=e=>{e.stopPropagation();toggle()};
+big.onclick=e=>{e.stopPropagation();toggle()};
+let drag=false;
+const pos=e=>{const r=sk.getBoundingClientRect();const x=e.clientX;return Math.min(Math.max((x-r.left)/r.width,0),1)};
+sk.addEventListener("pointerdown",e=>{drag=true;try{sk.setPointerCapture(e.pointerId)}catch(x){}const d=v.duration||0;if(d)v.currentTime=pos(e)*d;show()});
+sk.addEventListener("pointermove",e=>{if(!drag)return;const d=v.duration||0;if(d)v.currentTime=pos(e)*d;upd()});
+sk.addEventListener("pointerup",()=>{drag=false});
+let lt=0;
+const tap=e=>{if(e.target.closest(".vbar")||e.target.closest("button"))return;const now=Date.now();
+if(now-lt<320){lt=0;const r=wrap.getBoundingClientRect();const back=e.clientX<r.left+r.width/2;flash(back?fL:fR,back?"-10 dtk":"+10 dtk");seekRel(back?-10:10);show();return}
+lt=now;poke()};
+ui.addEventListener("click",tap);
+v.addEventListener("click",()=>show());
+mu.onclick=e=>{e.stopPropagation();v.muted=!v.muted;show()};
+vo.oninput=()=>{v.volume=+vo.value;v.muted=v.volume==0;show()};
+v.addEventListener("volumechange",()=>{mu.textContent=(v.muted||v.volume==0)?"🔇":"🔊";if(!v.muted&&v.volume>0)vo.value=v.volume});
+mu.ondblclick=e=>{e.stopPropagation();wrap.classList.toggle("volopen")};
+const SP=[1,1.25,1.5,2,0.5];sp.onclick=e=>{e.stopPropagation();const i=(SP.indexOf(v.playbackRate)+1)%SP.length;v.playbackRate=SP[i];sp.textContent=String(SP[i]).replace(".",",")+"x";show()};
+st.onclick=e=>{e.stopPropagation();const c=window._cur;if(c)openSheet(c[0],c[1])};
+fs.onclick=e=>{e.stopPropagation();try{if(document.fullscreenElement)document.exitFullscreen();else if(wrap.requestFullscreen)wrap.requestFullscreen();else if(v.webkitEnterFullscreen)v.webkitEnterFullscreen()}catch(x){}show()};
+v.addEventListener("timeupdate",upd);v.addEventListener("progress",upd);
+v.addEventListener("loadedmetadata",()=>{upd();show()});
+v.addEventListener("play",()=>{upd();show()});v.addEventListener("pause",()=>{upd();show()});
+v.addEventListener("waiting",()=>spin.classList.add("on"));
+v.addEventListener("playing",()=>spin.classList.remove("on"));v.addEventListener("canplay",()=>spin.classList.remove("on"));
+v.addEventListener("mousemove",show);ui.addEventListener("touchstart",show,{passive:true});
+sp.textContent=String(v.playbackRate||1).replace(".",",")+"x";
+show();upd();return true}
+async function playHttp(url,note){const v=$("#vid");if(!v)return;stopPlay();trackWatch(v);wirePlayer();vOverlay(true);const c=window._cur;if(c)vnow(`EP ${c[1]} · File langsung`);
 if(/\.m3u8($|\?)/i.test(url)){try{await loadLib("https://cdn.jsdelivr.net/npm/hls.js@1","Hls")}catch(e){}
 if(window.Hls&&Hls.isSupported()){const h=new Hls();window._hls=h;h.loadSource(url);h.attachMedia(v);h.on(Hls.Events.MANIFEST_PARSED,()=>{const w=window._qWantH||0;if(w>0&&h.levels&&h.levels.length){let bi=0;h.levels.forEach((L,x)=>{if(L.height&&L.height<=w)bi=x});try{h.currentLevel=bi}catch(e){}const q=$("#ql");if(q&&h.levels[bi])q.textContent=h.levels[bi].height+"p"}v.play().catch(()=>{})});autoSub();vstat(note||"Streaming HLS…");return}
 if(v.canPlayType("application/vnd.apple.mpegurl")){v.src=url;v.play().catch(()=>{});autoSub();vstat(note||"Streaming HLS…");return}
